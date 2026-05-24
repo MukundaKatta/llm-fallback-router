@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-fallback-router"
+version = "0.1.0"
+description = "Multi-provider failover for LLM calls. Try Anthropic, fall back to OpenAI / Gemini / Bedrock on retryable errors, with circuit-breaker hooks and a per-attempt audit log. BYO clients."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mukunda Rao Katta", email = "mukunda.vjcs6@gmail.com" }]
+keywords = [
+  "ai",
+  "llm",
+  "anthropic",
+  "openai",
+  "gemini",
+  "bedrock",
+  "failover",
+  "fallback",
+  "router",
+  "resilience",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.urls]
+Homepage = "https://github.com/MukundaKatta/llm-fallback-router"
+Source = "https://github.com/MukundaKatta/llm-fallback-router"
+Issues = "https://github.com/MukundaKatta/llm-fallback-router/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_fallback_router"]
