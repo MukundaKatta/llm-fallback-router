@@ -44,13 +44,18 @@ class FakeHttpStatusError(Exception):
 
 
 def test_first_provider_wins_returns_route_result():
-    def primary(req): return {"text": "hello", "from": "primary"}
-    def secondary(req): raise AssertionError("must not be called")
+    def primary(req):
+        return {"text": "hello", "from": "primary"}
 
-    router = Router([
-        Provider("primary", primary),
-        Provider("secondary", secondary),
-    ])
+    def secondary(req):
+        raise AssertionError("must not be called")
+
+    router = Router(
+        [
+            Provider("primary", primary),
+            Provider("secondary", secondary),
+        ]
+    )
     out = router.complete({"messages": []})
     assert isinstance(out, RouteResult)
     assert out.provider == "primary"
@@ -61,13 +66,18 @@ def test_first_provider_wins_returns_route_result():
 
 
 def test_falls_through_on_retryable_error():
-    def primary(req): raise FakeRateLimitError("rate limited")
-    def secondary(req): return {"text": "ok"}
+    def primary(req):
+        raise FakeRateLimitError("rate limited")
 
-    router = Router([
-        Provider("primary", primary),
-        Provider("secondary", secondary),
-    ])
+    def secondary(req):
+        return {"text": "ok"}
+
+    router = Router(
+        [
+            Provider("primary", primary),
+            Provider("secondary", secondary),
+        ]
+    )
     out = router.complete({"messages": []})
     assert out.provider == "secondary"
     assert out.tries == 2
@@ -77,13 +87,22 @@ def test_falls_through_on_retryable_error():
 
 
 def test_falls_through_multiple_times():
-    def p1(req): raise FakeRateLimitError()
-    def p2(req): raise FakeOverloadedError("overloaded")
-    def p3(req): return "win"
+    def p1(req):
+        raise FakeRateLimitError()
 
-    router = Router([
-        Provider("a", p1), Provider("b", p2), Provider("c", p3),
-    ])
+    def p2(req):
+        raise FakeOverloadedError("overloaded")
+
+    def p3(req):
+        return "win"
+
+    router = Router(
+        [
+            Provider("a", p1),
+            Provider("b", p2),
+            Provider("c", p3),
+        ]
+    )
     out = router.complete({})
     assert out.provider == "c"
     assert out.tries == 3
@@ -93,8 +112,11 @@ def test_falls_through_multiple_times():
 
 
 def test_non_retryable_surfaces_immediately():
-    def p1(req): raise FakeAuthError("bad key")
-    def p2(req): return "should not see this"
+    def p1(req):
+        raise FakeAuthError("bad key")
+
+    def p2(req):
+        return "should not see this"
 
     router = Router([Provider("a", p1), Provider("b", p2)])
     with pytest.raises(FakeAuthError):
@@ -102,8 +124,11 @@ def test_non_retryable_surfaces_immediately():
 
 
 def test_all_fail_raises_all_providers_failed():
-    def p1(req): raise FakeRateLimitError()
-    def p2(req): raise FakeOverloadedError("hot")
+    def p1(req):
+        raise FakeRateLimitError()
+
+    def p2(req):
+        raise FakeOverloadedError("hot")
 
     router = Router([Provider("a", p1), Provider("b", p2)])
     with pytest.raises(AllProvidersFailedError) as exc:
@@ -112,6 +137,10 @@ def test_all_fail_raises_all_providers_failed():
     assert len(exc.value.attempts) == 2
     assert exc.value.attempts[0].error_type == "FakeRateLimitError"
     assert exc.value.attempts[1].error_type == "FakeOverloadedError"
+    # the message names each failed provider and its error type
+    msg = str(exc.value)
+    assert "a(FakeRateLimitError)" in msg
+    assert "b(FakeOverloadedError)" in msg
 
 
 # ---- default_is_retryable predicate ---------------------------------------
@@ -135,19 +164,35 @@ def test_default_is_retryable_rejects_401():
 def test_default_is_retryable_handles_native_network_errors():
     assert default_is_retryable(TimeoutError("slow")) is True
     assert default_is_retryable(ConnectionError("nope")) is True
+    assert default_is_retryable(OSError("socket")) is True
+
+
+def test_default_is_retryable_resolves_status_via_response_attr():
+    # status_code lives on exc.response, not directly on exc (httpx style)
+    assert default_is_retryable(FakeHttpStatusError(503)) is True
+    assert default_is_retryable(FakeHttpStatusError(404)) is False
+
+
+def test_default_is_retryable_rejects_plain_exception():
+    assert default_is_retryable(ValueError("nope")) is False
 
 
 # ---- custom predicates ----------------------------------------------------
 
 
 def test_per_provider_is_retryable_overrides_global():
-    def p1(req): raise FakeAuthError("normally non-retryable")
-    def p2(req): return "second"
+    def p1(req):
+        raise FakeAuthError("normally non-retryable")
 
-    router = Router([
-        Provider("a", p1, is_retryable=lambda e: True),
-        Provider("b", p2),
-    ])
+    def p2(req):
+        return "second"
+
+    router = Router(
+        [
+            Provider("a", p1, is_retryable=lambda e: True),
+            Provider("b", p2),
+        ]
+    )
     out = router.complete({})
     assert out.provider == "b"
 
@@ -159,8 +204,11 @@ def test_global_is_retryable_overrides_default():
         calls.append(type(exc).__name__)
         return False
 
-    def p1(req): raise FakeRateLimitError("would be retryable by default")
-    def p2(req): return "second"
+    def p1(req):
+        raise FakeRateLimitError("would be retryable by default")
+
+    def p2(req):
+        return "second"
 
     router = Router(
         [Provider("a", p1), Provider("b", p2)],
@@ -177,8 +225,11 @@ def test_global_is_retryable_overrides_default():
 def test_on_attempt_called_for_both_success_and_failure():
     seen: list[Attempt] = []
 
-    def p1(req): raise FakeRateLimitError()
-    def p2(req): return "ok"
+    def p1(req):
+        raise FakeRateLimitError()
+
+    def p2(req):
+        return "ok"
 
     router = Router(
         [Provider("a", p1), Provider("b", p2)],

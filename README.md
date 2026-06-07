@@ -19,7 +19,7 @@ router = Router([
     Provider("openai",    openai_call),
 ])
 
-result = router.complete({"model": "claude-opus-4-7", "messages": [...]})
+result = router.complete({"model": "claude-opus-4-8", "messages": [...]})
 print(result.provider, result.tries)   # "anthropic", 1 — or "openai", 2 on failover
 ```
 
